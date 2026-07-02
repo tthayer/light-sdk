@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Lets tools talk to a plugged-in USB security key via LightSecurityKey.
+         required=false so it never filters devices that lack USB host. -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
     <application>
         <provider
             android:name="com.thelightphone.sdk.LightFileProvider"

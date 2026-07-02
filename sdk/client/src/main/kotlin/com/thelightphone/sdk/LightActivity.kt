@@ -135,6 +135,15 @@ class SealedLightContext(internal val androidContext: Context) {
     val dataStore: DataStore<Preferences> by lazy{ androidContext.dataStore }
     val filesDir: File by lazy{ androidContext.filesDir }
     val fileShare: LightFileShare by lazy { LightFileShare(androidContext) }
+
+    /**
+     * Reads OATH codes from a hardware security key (YubiKey, etc.) over USB or
+     * NFC. NFC tap requires a screen context (this is created with the screen's
+     * activity); USB works regardless.
+     */
+    val securityKey: com.thelightphone.sdk.security.LightSecurityKey by lazy {
+        com.thelightphone.sdk.security.LightSecurityKey(androidContext)
+    }
 }
 /**
  * Wrapper class to pass around an instance of LightActivity without exposing it to
