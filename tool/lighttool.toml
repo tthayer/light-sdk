@@ -1,9 +1,9 @@
 [tool]
 id = "com.thelightphone.app"
-label = "Light SDK Tool"
+label = "Music"
 versionCode = 1
 versionName = "1.0"
-permissions = ["android.permission.INTERNET"]
-# change if you run this on an LP3!
-# serverPackage = "com.lightos"
-serverPackage = "com.thelightphone.sdk.emulator"
+# Reads the device's music library via MediaStore.
+permissions = ["android.permission.READ_MEDIA_AUDIO"]
+# com.lightos on real hardware; com.thelightphone.sdk.emulator on the emulator.
+serverPackage = "com.lightos"

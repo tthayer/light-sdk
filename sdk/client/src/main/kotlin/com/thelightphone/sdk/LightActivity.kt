@@ -1,7 +1,9 @@
 package com.thelightphone.sdk
 
 import android.content.Context
+import android.media.AudioManager
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
@@ -41,6 +43,21 @@ class LightActivity internal constructor() : ComponentActivity() {
     private val currentScreen = mutableStateOf<BackStackEntry<*>?>(null)
     private var contentReady = false
     private val createdAt = android.os.SystemClock.elapsedRealtime()
+
+    // Volume-key handling for media tools that opted in via useMediaVolumeKeys().
+    private var mediaVolumeKeysEnabled = false
+    private val volumeIndicator = mutableStateOf<LightVolumeIndicator?>(null)
+    private var volumeToken = 0L
+
+    /**
+     * Intercept the hardware volume keys, adjust the media stream ourselves, and
+     * show the in-app volume HUD. Enabled by [useMediaVolumeKeys]; LightOS's own
+     * volume UI does not render over tool windows.
+     */
+    internal fun enableMediaVolumeKeys() {
+        mediaVolumeKeysEnabled = true
+        volumeControlStream = AudioManager.STREAM_MUSIC
+    }
 
     internal fun <T> navigateTo(screen: SimpleLightScreen<T>, resultCallback: ((T) -> Unit)? = null) {
         currentScreen.value?.screen?.notifyWillHide()
@@ -88,25 +105,28 @@ class LightActivity internal constructor() : ComponentActivity() {
 
         setContent {
             androidx.compose.runtime.LaunchedEffect(Unit) { contentReady = true }
-            val screen = currentScreen.value?.screen
-            if (screen != null) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                    ) {
-                        val content: @Composable () -> Unit = { screen.Content() }
-                        if (screen is ViewModelStoreOwner) {
-                            CompositionLocalProvider(
-                                LocalViewModelStoreOwner provides screen,
-                                content = content,
-                            )
-                        } else {
-                            content()
+            Box(modifier = Modifier.fillMaxSize()) {
+                val screen = currentScreen.value?.screen
+                if (screen != null) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                        ) {
+                            val content: @Composable () -> Unit = { screen.Content() }
+                            if (screen is ViewModelStoreOwner) {
+                                CompositionLocalProvider(
+                                    LocalViewModelStoreOwner provides screen,
+                                    content = content,
+                                )
+                            } else {
+                                content()
+                            }
                         }
                     }
                 }
+                LightVolumeOverlay(volumeIndicator.value)
             }
         }
 
@@ -128,6 +148,36 @@ class LightActivity internal constructor() : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         currentScreen.value?.screen?.notifyWillShow()
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (mediaVolumeKeysEnabled && isVolumeKey(keyCode)) {
+            adjustMediaVolume(raise = keyCode == KeyEvent.KEYCODE_VOLUME_UP)
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        // Consume the matching key-up so the framework doesn't also show its own UI.
+        if (mediaVolumeKeysEnabled && isVolumeKey(keyCode)) return true
+        return super.onKeyUp(keyCode, event)
+    }
+
+    private fun isVolumeKey(keyCode: Int): Boolean =
+        keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+
+    private fun adjustMediaVolume(raise: Boolean) {
+        val audio = getSystemService(AudioManager::class.java) ?: return
+        val direction = if (raise) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER
+        // Flag 0: change the volume without the system's own (absent) volume UI.
+        audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, direction, 0)
+        volumeToken += 1
+        volumeIndicator.value = LightVolumeIndicator(
+            level = audio.getStreamVolume(AudioManager.STREAM_MUSIC),
+            max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC),
+            token = volumeToken,
+        )
     }
 }
 
