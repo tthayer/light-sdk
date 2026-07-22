@@ -163,6 +163,7 @@ object LightSdkServer {
         setOf(
             Manifest.permission.CAMERA,
             Manifest.permission.READ_MEDIA_AUDIO,
+            Manifest.permission.BLUETOOTH_CONNECT,
         ).contains(permissionName)
     }
 

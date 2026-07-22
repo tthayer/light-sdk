@@ -144,6 +144,15 @@ class SealedLightContext(internal val androidContext: Context) {
     val securityKey: com.thelightphone.sdk.security.LightSecurityKey by lazy {
         com.thelightphone.sdk.security.LightSecurityKey(androidContext)
     }
+
+    /**
+     * Brokers an RFCOMM (SPP-style) serial link to a paired Bluetooth device
+     * (e.g. Sony earbuds). Like [securityKey], this is created with the screen's
+     * activity so it can request the BLUETOOTH_CONNECT runtime permission.
+     */
+    val bluetoothSerial: com.thelightphone.sdk.bluetooth.LightBluetoothSerial by lazy {
+        com.thelightphone.sdk.bluetooth.LightBluetoothSerial(androidContext)
+    }
 }
 /**
  * Wrapper class to pass around an instance of LightActivity without exposing it to

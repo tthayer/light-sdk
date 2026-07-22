@@ -3,6 +3,12 @@
     <!-- Lets tools talk to a plugged-in USB security key via LightSecurityKey.
          required=false so it never filters devices that lack USB host. -->
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+    <!-- Lets tools talk to a paired Bluetooth device via LightBluetoothSerial.
+         required=false so it never filters devices that lack Bluetooth. The
+         dangerous BLUETOOTH_CONNECT runtime permission itself is declared by the
+         tool app's generated manifest (see plugin ManifestGenerator), matching
+         how NFC is handled. -->
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <application>
         <provider
             android:name="com.thelightphone.sdk.LightFileProvider"

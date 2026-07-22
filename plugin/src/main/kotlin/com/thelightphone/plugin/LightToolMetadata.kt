@@ -143,6 +143,7 @@ object LightToolPolicy {
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.NFC",
+        "android.permission.BLUETOOTH_CONNECT",
     )
 
     /**
@@ -159,6 +160,7 @@ object LightToolPolicy {
         "android.permission.ACCESS_FINE_LOCATION" to listOf("android.hardware.location.gps"),
         "android.permission.ACCESS_COARSE_LOCATION" to listOf("android.hardware.location.network"),
         "android.permission.NFC" to listOf("android.hardware.nfc"),
+        "android.permission.BLUETOOTH_CONNECT" to listOf("android.hardware.bluetooth"),
     )
 }
 
