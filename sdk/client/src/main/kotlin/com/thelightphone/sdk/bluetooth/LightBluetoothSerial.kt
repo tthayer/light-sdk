@@ -163,13 +163,18 @@ class LightBluetoothSerial internal constructor(private val context: Context) {
         }
         val componentName = ComponentName.unflattenFromString(component.componentName)
             ?: throw LightBluetoothException("Server returned an invalid permission component")
-        activity.startActivity(
+        // Must be startActivityForResult, NOT startActivity: LightSdkPermissionActivity
+        // reads getCallingPackage() to identify the requesting tool and exits with
+        // "Calling package was null" if it's absent. Plain startActivity leaves the
+        // caller null. This mirrors PermissionRequestLauncher.launch() (the CAMERA path).
+        activity.startActivityForResult(
             Intent()
                 .setComponent(componentName)
                 .putExtra(
                     LightServiceMethod.RequestPermissionComponent.PERMISSION_NAME_KEY,
                     Manifest.permission.BLUETOOTH_CONNECT,
                 ),
+            PERMISSION_REQUEST_CODE,
         )
         val deadline = System.currentTimeMillis() + PERMISSION_TIMEOUT_MS
         while (System.currentTimeMillis() < deadline) {
@@ -287,6 +292,7 @@ class LightBluetoothSerial internal constructor(private val context: Context) {
         const val DEMO_DEVICE_ADDRESS = "00:11:22:33:44:55"
         const val PERMISSION_TIMEOUT_MS = 60_000L
         const val PERMISSION_POLL_INTERVAL_MS = 250L
+        const val PERMISSION_REQUEST_CODE = 10101
         const val DEMO_FRAME_INTERVAL_MS = 200L
         const val READ_BUFFER_SIZE = 1024
     }
