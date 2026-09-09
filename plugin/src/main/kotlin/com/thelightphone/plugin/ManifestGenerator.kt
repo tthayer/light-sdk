@@ -38,6 +38,7 @@ object ManifestGenerator {
         appendLine("""            android:value="${xmlAttr(metadata.serverPackage)}" />""")
         appendLine("""        <activity""")
         appendLine("""            android:name="com.thelightphone.sdk.LightActivity"""")
+        appendLine("""            android:screenOrientation="portrait"""")
         appendLine("""            android:exported="true">""")
         appendLine("""            <intent-filter>""")
         appendLine("""                <action android:name="android.intent.action.MAIN" />""")
