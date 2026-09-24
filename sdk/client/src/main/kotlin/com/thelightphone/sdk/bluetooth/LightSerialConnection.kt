@@ -6,11 +6,14 @@ import kotlinx.coroutines.flow.Flow
  * A paired Bluetooth device visible to the tool, as brokered by
  * [LightBluetoothSerial]. [address] is an opaque handle understood by the
  * broker — app code passes it back to [LightBluetoothSerial.connect] and never
- * needs to interpret it.
+ * needs to interpret it. [connected] is true when the device currently has an
+ * audio (A2DP) or headset (HFP) link to the phone, i.e. it is in range and on;
+ * probing those first avoids a multi-second page timeout per absent device.
  */
 data class LightBluetoothDevice(
     val name: String?,
     val address: String,
+    val connected: Boolean = false,
 )
 
 /**

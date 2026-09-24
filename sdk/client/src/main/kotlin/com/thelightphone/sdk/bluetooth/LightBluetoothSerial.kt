@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothSocket
 import android.content.ComponentName
 import android.content.Context
@@ -22,9 +23,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
 import java.io.IOException
 import java.util.UUID
 
@@ -89,14 +93,44 @@ class LightBluetoothSerial internal constructor(private val context: Context) {
         val adapter = bluetoothAdapter
             ?: throw LightBluetoothException("Bluetooth is not available on this device")
         ensureConnectPermission()
+        val connected = connectedAddresses(adapter)
         return try {
             adapter.bondedDevices.orEmpty().map {
-                LightBluetoothDevice(name = it.name, address = it.address)
+                LightBluetoothDevice(name = it.name, address = it.address, connected = it.address in connected)
             }
         } catch (e: SecurityException) {
             throw LightBluetoothException("Missing BLUETOOTH_CONNECT permission", e)
         }
     }
+
+    /**
+     * Addresses with a live A2DP or HEADSET link. Best-effort: a profile whose
+     * proxy does not bind within [PROFILE_PROXY_TIMEOUT_MS] contributes nothing.
+     */
+    private suspend fun connectedAddresses(adapter: BluetoothAdapter): Set<String> {
+        val out = HashSet<String>()
+        for (profile in intArrayOf(BluetoothProfile.A2DP, BluetoothProfile.HEADSET)) {
+            withTimeoutOrNull(PROFILE_PROXY_TIMEOUT_MS) { connectedOn(adapter, profile) }?.let(out::addAll)
+        }
+        return out
+    }
+
+    @SuppressLint("MissingPermission")
+    private suspend fun connectedOn(adapter: BluetoothAdapter, profile: Int): List<String> =
+        suspendCancellableCoroutine { cont ->
+            val listener = object : BluetoothProfile.ServiceListener {
+                override fun onServiceConnected(p: Int, proxy: BluetoothProfile) {
+                    val addresses = runCatching { proxy.connectedDevices.map { it.address } }.getOrDefault(emptyList())
+                    runCatching { adapter.closeProfileProxy(p, proxy) }
+                    if (cont.isActive) cont.resume(addresses)
+                }
+
+                override fun onServiceDisconnected(p: Int) = Unit
+            }
+            if (!runCatching { adapter.getProfileProxy(context, listener, profile) }.getOrDefault(false)) {
+                cont.resume(emptyList())
+            }
+        }
 
     /**
      * Opens an RFCOMM socket to the paired device at [address] on the given
@@ -295,5 +329,8 @@ class LightBluetoothSerial internal constructor(private val context: Context) {
         const val PERMISSION_REQUEST_CODE = 10101
         const val DEMO_FRAME_INTERVAL_MS = 200L
         const val READ_BUFFER_SIZE = 1024
+
+        /** Upper bound on binding one profile proxy in [connectedAddresses]. */
+        const val PROFILE_PROXY_TIMEOUT_MS = 1_000L
     }
 }
